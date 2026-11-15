@@ -1,0 +1,53 @@
+# Đăng Gần Nhau lên GitHub Pages: đóng gói thư viện + phông, kiểm thử 5 trình duyệt, đạt mới đăng
+name: Đăng web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Đóng gói thư viện + phông
+        run: bash tools/build.sh
+      - name: Kiểm thử (5 trình duyệt, gồm các trường hợp sai mật khẩu / bị từ chối / phòng khoá)
+        run: |
+          (cd test && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null)
+          python3 -m http.server 8080 >/dev/null 2>&1 &
+          sleep 1
+          cd test && node two-browsers.mjs
+      - name: Gom file của trang
+        run: |
+          mkdir _site
+          cp -r index.html style.css app.js icon.svg manifest.webmanifest fonts.css fonts vendor _site/
+          touch _site/.nojekyll
+          (cd _site && find . -type f | sort | xargs sha256sum) | tee SHA256SUMS.txt
+          cp SHA256SUMS.txt _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4

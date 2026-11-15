@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Khoá cứng: chỉ chạy mã của chính app; YouTube chỉ tải khi người dùng đồng ý; không gửi địa chỉ trang cho ai -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data: https://i.ytimg.com; media-src 'self' blob: https:; connect-src 'self' wss:; frame-src https://www.youtube-nocookie.com https://www.youtube.com; manifest-src 'self'; worker-src 'self' blob:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Gần Nhau</title>
+<meta name="description" content="Chat, nghe nhạc, xem phim cùng nhau. Kết nối thẳng giữa các máy, mã hoá hai lớp, không lưu gì trên máy chủ.">
+<meta name="theme-color" content="#17142b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- MÀN HÌNH ĐẦU -->
+<main id="home" class="home">
+  <div class="home-card">
+    <div class="logo" aria-hidden="true"><span></span><span></span></div>
+    <h1>Gần Nhau</h1>
+    <p class="lead" id="lead">Chat, nghe nhạc, xem phim cùng nhau dù ở xa.</p>
+    <label for="myName">Tên của bạn</label>
+    <input id="myName" maxlength="24" placeholder="vd. Mây" autocomplete="nickname">
+    <label for="pass">Mật khẩu phòng</label>
+    <div class="row">
+      <input id="pass" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ít nhất 6 ký tự">
+      <button id="btnGen" type="button" title="Tạo mật khẩu ngẫu nhiên">Tạo</button>
+    </div>
+    <p class="hint" id="passHint">Mật khẩu không nằm trong link. Báo cho người kia bằng lời (gọi điện, gặp trực tiếp), đừng gửi chung với link.</p>
+    <button id="btnCreate" class="primary">Tạo phòng mới</button>
+    <div id="joinBlock">
+      <div class="or"><span>hoặc</span></div>
+      <label for="joinLink">Dán link mời bạn nhận được</label>
+      <div class="row">
+        <input id="joinLink" placeholder="https://…#abc.xyz">
+        <button id="btnJoin">Vào phòng</button>
+      </div>
+    </div>
+    <ul class="safe">
+      <li><b>Hai lớp khoá</b>: link để tìm phòng, mật khẩu để mở khoá. Lộ link mà không có mật khẩu thì không vào được.</li>
+      <li><b>Chủ phòng duyệt</b> từng người vào, có thể khoá phòng khi đã đủ người.</li>
+      <li><b>Kết nối thẳng, mã hoá hai lớp</b>. Không máy chủ nào đọc hay lưu tin nhắn, ảnh, phim; rời phòng là mất hết.</li>
+      <li><b>Mã xác minh</b> cho từng người: đọc cho nhau nghe để chắc không ai đứng giữa.</li>
+    </ul>
+  </div>
+</main>
+
+<!-- PHÒNG -->
+<div id="room" class="room" hidden>
+  <header class="bar">
+    <button id="btnLeave" class="ghost" title="Rời phòng">←</button>
+    <div class="who">
+      <div id="people" class="people"></div>
+      <div id="status" class="status">Đang kết nối…</div>
+    </div>
+    <button id="btnLock" class="ghost lock" title="Khoá phòng" hidden>🔓</button>
+    <button id="btnInvite" class="invite" hidden>Mời</button>
+  </header>
+
+  <section class="stage" id="stage">
+    <div id="requests" class="requests"></div>
+    <div class="source-tabs" role="tablist">
+      <button data-src="link" class="on">YouTube / link</button>
+      <button data-src="file">File trên máy</button>
+      <button data-src="cast">Phát cho cả nhóm</button>
+      <button data-src="screen" id="tabScreen">Chia sẻ màn hình</button>
+    </div>
+    <div class="source-pane" data-pane="link">
+      <div class="row">
+        <input id="linkInput" placeholder="Dán link YouTube, link video (.mp4…) hoặc trang web">
+        <button id="btnLink" class="primary">Xem cùng</button>
+      </div>
+      <p class="hint">YouTube là dịch vụ của Google: Google sẽ biết video được xem. Link video trực tiếp và file thì không đi qua ai.</p>
+    </div>
+    <div class="source-pane" data-pane="file" hidden>
+      <p class="hint">Mỗi người mở <b>cùng một file</b> có sẵn trên máy mình. App chỉ đồng bộ vị trí phát, file không rời khỏi máy.</p>
+      <label class="file"><input type="file" id="fileLocal" accept="video/*,audio/*"><span>Chọn file nhạc / phim</span></label>
+    </div>
+    <div class="source-pane" data-pane="cast" hidden>
+      <p class="hint">Bạn phát file của mình, cả nhóm xem trực tiếp (mã hoá), không cần có file. Giữ màn hình mở, mạng ổn định.</p>
+      <label class="file"><input type="file" id="fileCast" accept="video/*,audio/*"><span>Chọn file để phát</span></label>
+    </div>
+    <div class="source-pane" data-pane="screen" hidden>
+      <p class="hint">Chia sẻ một tab hoặc cả màn hình (trên máy tính). Phim có bản quyền chống quay màn hình có thể hiện màu đen.</p>
+      <button id="btnScreen" class="primary">Bắt đầu chia sẻ</button>
+    </div>
+
+    <div class="screen" id="screen">
+      <div id="empty" class="empty">
+        <div class="empty-art" aria-hidden="true">♪</div>
+        <p>Chọn thứ muốn xem hoặc nghe cùng nhau ở trên.<br>Ai bấm phát, dừng, tua thì cả phòng theo.</p>
+      </div>
+      <div id="ytBox" class="media" hidden><div id="yt"></div></div>
+      <video id="vid" class="media" playsinline controls hidden></video>
+      <video id="remote" class="media" playsinline autoplay controls hidden></video>
+      <div id="webBox" class="web" hidden>
+        <p>Trang web đang xem chung:</p>
+        <p><span id="webLink" class="weblink"></span></p>
+        <div class="row center"><button id="btnOpenWeb">Mở trang</button><button id="btnCopyWeb" class="ghost">Chép link</button></div>
+        <p class="hint">Muốn xem đồng bộ, dùng “Chia sẻ màn hình” từ máy tính.</p>
+      </div>
+      <div id="needFile" class="overlay" hidden>
+        <p id="needFileText"></p>
+        <label class="file"><input type="file" id="fileMatch" accept="video/*,audio/*"><span>Chọn file trên máy bạn</span></label>
+      </div>
+      <div id="ytAsk" class="overlay" hidden>
+        <p id="ytAskText"></p>
+        <div class="row center"><button id="btnYtOk" class="primary">Xem bằng YouTube</button><button id="btnYtNo" class="ghost">Không</button></div>
+      </div>
+      <button id="tapToJoin" class="overlay tap" hidden>▶ Bấm để xem cùng</button>
+    </div>
+    <div id="nowInfo" class="now"></div>
+  </section>
+
+  <aside class="chat">
+    <div id="msgs" class="msgs" aria-live="polite"></div>
+    <div id="typing" class="typing"></div>
+    <form id="chatForm" class="compose">
+      <label class="pic" title="Gửi ảnh"><input type="file" id="pic" accept="image/*">＋</label>
+      <input id="chatInput" placeholder="Nhắn gì đó…" autocomplete="off" maxlength="2000">
+      <button class="heart" type="button" id="btnHeart" title="Thả tim">♥</button>
+      <button class="send primary" type="submit">Gửi</button>
+    </form>
+  </aside>
+
+  <!-- chờ chủ phòng duyệt -->
+  <div id="waiting" class="cover" hidden>
+    <div class="cover-card">
+      <div class="pulse" aria-hidden="true"></div>
+      <h2 id="waitTitle">Đang tìm phòng…</h2>
+      <p id="waitText">Mở khoá phòng bằng mật khẩu và kết nối thẳng tới người trong phòng.</p>
+      <div id="waitCodes" class="codes"></div>
+      <button id="btnWaitLeave" class="ghost">Huỷ</button>
+    </div>
+  </div>
+</div>
+
+<!-- hộp mời -->
+<div id="inviteBox" class="modal" hidden>
+  <div class="modal-card">
+    <h2>Mời vào phòng</h2>
+    <p><b>Bước 1.</b> Gửi link này qua tin nhắn:</p>
+    <input id="inviteLink" readonly>
+    <div class="row">
+      <button id="btnCopy" class="primary">Chép link</button>
+      <button id="btnShare">Chia sẻ…</button>
+    </div>
+    <p><b>Bước 2.</b> Nói mật khẩu cho người đó <b>bằng lời</b> (gọi điện / gặp trực tiếp), đừng gửi chung với link:</p>
+    <div class="passbig" id="passShow"></div>
+    <p class="hint">Khi người đó vào, bạn sẽ được hỏi có cho vào không, kèm mã xác minh để hai người đọc cho nhau so khớp.</p>
+    <button id="btnClose" class="ghost">Xong</button>
+  </div>
+</div>
+
+<!-- mã xác minh một người -->
+<div id="verifyBox" class="modal" hidden>
+  <div class="modal-card">
+    <h2 id="verifyTitle">Mã xác minh</h2>
+    <p>Gọi điện hoặc gặp trực tiếp, hai người cùng đọc dãy số này. Giống nhau nghĩa là đang nối thẳng với nhau, không ai nghe lén ở giữa.</p>
+    <div class="passbig" id="verifyCode"></div>
+    <button id="btnVerifyClose" class="ghost">Đóng</button>
+  </div>
+</div>
+<div id="hearts" class="hearts" aria-hidden="true"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "Gần Nhau",
+  "short_name": "Gần Nhau",
+  "description": "Chat, nghe nhạc, xem phim cùng nhau – kết nối thẳng, mã hoá hai đầu",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#17142b",
+  "theme_color": "#17142b",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
