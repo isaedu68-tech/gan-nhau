@@ -116,7 +116,8 @@ async function enter (rid, k, asHost) {
   $('#home').hidden = true; $('#room').hidden = false
   showWait('Đang tạo khoá…', 'Mất khoảng một giây.')
   await deriveKeys(rid, k, pass)
-  room = joinRoom({ appId: APP_ID, password: signalPw }, roomId)
+  // tìm nhau qua nhiều relay cùng lúc (relay chỉ thấy dữ liệu bắt tay đã mã hoá) để nhanh và ít phụ thuộc một relay
+  room = joinRoom({ appId: APP_ID, password: signalPw, relayRedundancy: 8 }, roomId)
   wire()
   if (asHost) {
     state = 'in'; hostId = selfId; roster = [selfId]
@@ -125,11 +126,16 @@ async function enter (rid, k, asHost) {
     openInvite()
   } else {
     state = 'waiting'
-    showWait('Đang tìm phòng…', 'Mở khoá bằng mật khẩu và kết nối thẳng tới người trong phòng.')
-    clearTimeout(waitTimer)
-    waitTimer = setTimeout(() => {
-      if (state === 'waiting' && peers.size === 0) showWait('Chưa thấy ai trong phòng', 'Kiểm tra lại mật khẩu (phân biệt hoa thường), hỏi chủ phòng còn mở phòng không, hoặc đổi Wi-Fi ↔ 4G rồi thử lại.')
-    }, 25000)
+    const t0 = Date.now()
+    const tick = () => {
+      if (state !== 'waiting' || peers.size) return
+      const s = Math.round((Date.now() - t0) / 1000)
+      if (s < 20) showWait('Đang tìm phòng… ' + s + ' giây', 'Mở khoá bằng mật khẩu và kết nối thẳng tới người trong phòng. Thường mất 5–20 giây.')
+      else if (s < 90) showWait('Vẫn đang tìm phòng… ' + s + ' giây', 'Mạng di động đôi khi cần tới 1 phút. Chủ phòng cần đang mở phòng trên màn hình.')
+      else showWait('Chưa thấy ai trong phòng (' + s + ' giây)', 'App vẫn đang tìm. Kiểm tra: mật khẩu đúng (phân biệt hoa thường), chủ phòng đang mở phòng, thử cả hai cùng dùng Wi-Fi.')
+      waitTimer = setTimeout(tick, 1000)
+    }
+    clearTimeout(waitTimer); tick()
   }
   renderPeople(); renderControls()
 }
