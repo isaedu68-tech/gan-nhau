@@ -640,7 +640,7 @@ setInterval(() => { if (state === 'waiting' && peers.size) renderWaitCodes(); if
 // ---------- màn hình đầu ----------
 $('#myName').value = store.get('gn-name') || ''
 $('#btnGen').onclick = () => { $('#pass').value = genPass() }
-$('#btnCreate').onclick = () => { if (!$('#pass').value.trim()) $('#pass').value = genPass(); enter(rand(8), rand(16), true)                 // link ngắn: 8 ký tự phòng + 16 ký tự khoá (80 bit) – còn mật khẩu riêng }
+$('#btnCreate').onclick = () => { if (!$('#pass').value.trim()) $('#pass').value = genPass(); enter(rand(8), rand(16), true) }   // link ngắn: 8 ký tự phòng + 16 ký tự khoá (80 bit), còn mật khẩu riêng
 $('#btnJoin').onclick = () => {
   const p = parseLink($('#joinLink').value)
   if (!p) { toast('Link mời chưa đúng – hãy dán nguyên link'); return }
