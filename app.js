@@ -22,7 +22,7 @@ const native = bridge ? {
   share: (t) => bridge.postMessage(JSON.stringify({ a: 'share', t })),
   copy: (t) => bridge.postMessage(JSON.stringify({ a: 'copy', t })),
   openUrl: (t) => bridge.postMessage(JSON.stringify({ a: 'open', t })),
-  webBase: () => 'https://isaedu68-tech.github.io/gan-nhau/'
+  webBase: () => 'https://isaedu68-tech.github.io/gn/'
 } : null
 
 // ---------- tiện ích ----------

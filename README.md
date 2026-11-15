@@ -2,7 +2,7 @@
 
 Chat, nghe nhạc, xem phim cùng nhau – dành cho cặp đôi và nhóm nhỏ (2–6 người).
 
-**Dùng:** https://isaedu68-tech.github.io/gan-nhau/
+**Dùng:** https://isaedu68-tech.github.io/gn/
 
 ## Bảo mật
 
