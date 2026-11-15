@@ -12,6 +12,7 @@
 import { joinRoom, selfId } from './vendor/trystero.js'
 
 const APP_ID = 'gan-nhau-v2'
+const RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.nostr.band', 'wss://nostr.mom', 'wss://relay.snort.social', 'wss://offchain.pub', 'wss://relay.nostr.bg']
 const $ = (s) => document.querySelector(s)
 const COLORS = ['#ff7aa2', '#5ee6c1', '#ffc94a', '#8fb8ff', '#c79bff', '#ff9e6b']
 const te = new TextEncoder(), td = new TextDecoder()
@@ -117,7 +118,8 @@ async function enter (rid, k, asHost) {
   showWait('Đang tạo khoá…', 'Mất khoảng một giây.')
   await deriveKeys(rid, k, pass)
   // tìm nhau qua nhiều relay cùng lúc (relay chỉ thấy dữ liệu bắt tay đã mã hoá) để nhanh và ít phụ thuộc một relay
-  room = joinRoom({ appId: APP_ID, password: signalPw, relayRedundancy: 8 }, roomId)
+  // mọi máy dùng CÙNG một danh sách relay (nếu mỗi máy chọn ngẫu nhiên, hai máy có thể không gặp nhau ở relay nào)
+  room = joinRoom({ appId: APP_ID, password: signalPw, relayUrls: RELAYS, relayRedundancy: RELAYS.length }, roomId)
   wire()
   if (asHost) {
     state = 'in'; hostId = selfId; roster = [selfId]

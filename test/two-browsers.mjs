@@ -90,12 +90,13 @@ ok('bị từ chối: không vào được, không nhận được tin')
 // khoá phòng: E đúng mật khẩu bị từ chối tự động
 await A.click('#btnLock')
 await join(E, 'Người thứ tư', PASS)
+const tE = Date.now()
 try { await until(E, () => document.querySelector('#waitTitle').textContent.includes('đã khoá'), null, { timeout: 120000 }) } catch (e) {
   // E không tìm được phòng trong 2 phút (mạng relay chậm): vẫn an toàn – E không vào được phòng
   if (await E.evaluate(() => window.__gn.state) === 'in') throw new Error('phòng khoá mà vẫn vào được!')
-  console.log('  (E chưa tìm được phòng trong 2 phút – không vào được, vẫn an toàn)')
+  console.log('  ⚠ E chưa tìm được phòng trong 2 phút – không vào được, vẫn an toàn')
 }
-ok('phòng khoá: người mới bị từ chối tự động')
+console.log('  E tìm thấy phòng sau', ((Date.now() - tE) / 1000).toFixed(1), 's'); ok('phòng khoá: người mới bị từ chối tự động')
 
 await A.screenshot({ path: 'shot-A.png' }); await B.setViewportSize({ width: 390, height: 844 }); await B.screenshot({ path: 'shot-B-phone.png' })
 await b.close()
