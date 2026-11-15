@@ -79,7 +79,7 @@
       <label class="file"><input type="file" id="fileLocal" accept="video/*,audio/*"><span>Chọn file nhạc / phim</span></label>
     </div>
     <div class="source-pane" data-pane="cast" hidden>
-      <p class="hint">Bạn phát file của mình, cả nhóm xem trực tiếp (mã hoá), không cần có file. Giữ màn hình mở, mạng ổn định.</p>
+      <p class="hint">Bạn phát file nhạc / phim của mình, cả nhóm nghe và xem trực tiếp (mã hoá), không cần có file. Chạy được cả trên iPhone. Giữ màn hình mở, mạng ổn định.</p>
       <label class="file"><input type="file" id="fileCast" accept="video/*,audio/*"><span>Chọn file để phát</span></label>
     </div>
     <div class="source-pane" data-pane="screen" hidden>
@@ -95,6 +95,7 @@
       <div id="ytBox" class="media" hidden><div id="yt"></div></div>
       <video id="vid" class="media" playsinline controls hidden></video>
       <video id="remote" class="media" playsinline autoplay controls hidden></video>
+      <div id="audioOnly" class="audio-only" hidden><div class="disc" aria-hidden="true">♪</div><p id="audioOnlyName"></p></div>
       <div id="webBox" class="web" hidden>
         <p>Trang web đang xem chung:</p>
         <p><span id="webLink" class="weblink"></span></p>

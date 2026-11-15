@@ -27,6 +27,7 @@ jobs:
         run: bash tools/build.sh
       - name: Kiểm thử (5 trình duyệt, gồm các trường hợp sai mật khẩu / bị từ chối / phòng khoá)
         run: |
+          (cd test && ffmpeg -loglevel error -f lavfi -i testsrc=size=320x240:rate=15 -f lavfi -i sine=frequency=440 -t 8 -c:v libvpx -c:a libopus sample.webm && ffmpeg -loglevel error -f lavfi -i sine=frequency=330 -t 8 -c:a libvorbis sample.ogg)
           (cd test && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null)
           python3 -m http.server 8080 >/dev/null 2>&1 &
           sleep 1

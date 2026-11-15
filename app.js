@@ -69,7 +69,7 @@ const peers = new Map()           // peerId -> {name, color, rtt, ok}
 const requests = new Map()        // chủ phòng: peerId -> {name}
 const sendRaw = {}
 let media = null, seq = 0, applying = 0
-let castStream = null, yt = null, ytReady = null, pendingYt = null
+let castStream = null, yt = null, ytReady = null, pendingYt = null, streamWait = 0
 let hbTimer = 0, typingT = 0, waitTimer = 0, wakeLock = null
 const typingFrom = new Map()
 const isHost = () => hostId === selfId
@@ -190,9 +190,13 @@ function wire () {
   })
   room.onPeerStream((stream, id) => {
     if (!(peers.get(id) && peers.get(id).ok)) { stream.getTracks().forEach((t) => t.stop()); return }
+    clearTimeout(streamWait)
     const v = $('#remote'); v.srcObject = stream; showOnly('remote')
+    const audioOnly = stream.getVideoTracks().length === 0
+    $('#audioOnly').hidden = !audioOnly
+    $('#audioOnlyName').textContent = (media && media.kind === 'stream' && media.name) || 'Đang nghe cùng'
     v.play().catch(() => { $('#tapToJoin').hidden = false })
-    info(peerName(id) + ' đang phát cho cả nhóm')
+    info(peerName(id) + ' đang phát cho cả nhóm' + (media && media.name ? ' · ' + media.name : ''))
   })
   setInterval(async () => {                                      // đo độ trễ để bù khi đồng bộ
     for (const id of approved()) { try { const ms = await room.ping(id); const p = peers.get(id); if (p) p.rtt = ms } catch {} }
@@ -355,6 +359,7 @@ async function cleanImage (file) {
 function showOnly (which) {
   for (const id of ['empty', 'ytBox', 'vid', 'remote', 'webBox']) $('#' + id).hidden = id !== which
   $('#needFile').hidden = true; $('#tapToJoin').hidden = true; $('#ytAsk').hidden = true
+  if (which !== 'remote') $('#audioOnly').hidden = true
   if (which !== 'vid') { const v = $('#vid'); if (!v.paused) { applying++; v.pause(); setTimeout(() => applying--, 300) } }
   if (which !== 'ytBox' && yt && yt.pauseVideo) { try { applying++; yt.pauseVideo(); setTimeout(() => applying--, 300) } catch {} }
   if (which === 'vid' || which === 'remote' || which === 'ytBox') keepAwake()
@@ -431,7 +436,14 @@ async function applyRemote (d, from) {
     if (!/^https?:\/\//i.test(media.src)) return
     showOnly('webBox'); $('#webLink').textContent = media.src; return
   }
-  if (d.kind === 'stream') return
+  if (d.kind === 'stream') {
+    if ($('#remote').hidden || !$('#remote').srcObject) {
+      showOnly('empty'); info(peerName(from) + ' bắt đầu phát · ' + media.name + ' – đang nhận hình / tiếng…')
+      clearTimeout(streamWait)
+      streamWait = setTimeout(() => { if ($('#remote').hidden) info('Chưa nhận được hình / tiếng từ ' + peerName(from) + '. Nhờ bạn ấy chọn lại file, hoặc cả hai dùng “File trên máy”.') }, 12000)
+    }
+    return
+  }
   if (d.kind === 'yt') {
     if (!/^[A-Za-z0-9_-]{11}$/.test(media.src)) return
     if (!ytReady) {                                              // chưa đồng ý dùng YouTube: hỏi trước
@@ -487,6 +499,7 @@ for (const ev of ['play', 'pause', 'seeked', 'ratechange']) {
 }
 
 function stopCast () {
+  cancelAnimationFrame(castRaf)
   if (castStream) { try { room && room.removeStream(castStream) } catch {} ; castStream.getTracks().forEach((t) => { try { t.stop() } catch {} }) }
   castStream = null
 }
@@ -530,15 +543,44 @@ $('#fileMatch').onchange = (e) => {
   vid.src = URL.createObjectURL(f); $('#needFile').hidden = true
   vid.addEventListener('loadedmetadata', () => { send.req('state', media.by) }, { once: true })
 }
+// Thu hình + tiếng của file đang phát để gửi cho cả nhóm.
+// Chrome / Android có sẵn captureStream; Safari (iPhone) không có: vẽ hình qua canvas, lấy tiếng qua Web Audio.
+let audioCtx = null, mediaSrc = null, castRaf = 0
+function captureFrom (v) {
+  const nat = !window.__noNativeCapture && (v.captureStream || v.mozCaptureStream)
+  if (nat) { const s = nat.call(v); if (s && s.getTracks().length) return s }
+  const out = new MediaStream()
+  if (v.videoWidth > 0) {
+    const k = Math.min(1, 1280 / v.videoWidth)
+    const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k)
+    const g = c.getContext('2d')
+    cancelAnimationFrame(castRaf)
+    const draw = () => { g.drawImage(v, 0, 0, c.width, c.height); castRaf = requestAnimationFrame(draw) }
+    draw()
+    c.captureStream(30).getVideoTracks().forEach((t) => out.addTrack(t))
+  }
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+    audioCtx.resume && audioCtx.resume()
+    if (!mediaSrc) { mediaSrc = audioCtx.createMediaElementSource(v); mediaSrc.connect(audioCtx.destination) }
+    const dest = audioCtx.createMediaStreamDestination()
+    mediaSrc.connect(dest)
+    dest.stream.getAudioTracks().forEach((t) => out.addTrack(t))
+  } catch {}
+  return out.getTracks().length ? out : null
+}
+
 $('#fileCast').onchange = async (e) => {
   const f = e.target.files[0]; if (!f) return
+  if (!approved().length) { toast('Chưa có ai trong phòng để phát cho'); }
   showOnly('vid'); vid.src = URL.createObjectURL(f)
   await new Promise((r) => vid.addEventListener('loadedmetadata', r, { once: true }))
   try { await vid.play() } catch {}
-  const s = vid.captureStream ? vid.captureStream() : vid.mozCaptureStream ? vid.mozCaptureStream() : null
-  if (!s) { toast('Trình duyệt này chưa phát được cho nhóm – dùng Chrome / Edge hoặc app Android'); return }
+  const s = captureFrom(vid)
+  if (!s) { toast('Máy này chưa phát cho nhóm được – thử “File trên máy”'); return }
   media = null
   castFrom(s, f.name)
+  e.target.value = ''
 }
 $('#btnScreen').onclick = async () => {
   try {

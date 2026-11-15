@@ -64,6 +64,17 @@ ok('chia sẻ link trang web')
 await A.setInputFiles('#fileLocal', { name: 'phim.webm', mimeType: 'video/webm', buffer: Buffer.alloc(2000) })
 await until(B, () => !document.querySelector('#needFile').hidden && document.querySelector('#needFileText').textContent.includes('phim.webm'), null, { timeout: 15000 })
 ok('đồng bộ file mỗi người')
+// phát cho cả nhóm: B phải nhận được luồng có hình + tiếng (cách có sẵn, rồi cách dự phòng cho iPhone)
+for (const mode of ['sẵn có', 'dự phòng iPhone']) {
+  if (mode !== 'sẵn có') await A.evaluate(() => { window.__noNativeCapture = true })
+  await B.evaluate(() => { const v = document.querySelector('#remote'); v.srcObject = null; v.hidden = true })
+  await A.setInputFiles('#fileCast', 'sample.webm')
+  await until(B, () => { const v = document.querySelector('#remote'); return !v.hidden && v.srcObject && v.srcObject.getAudioTracks().length > 0 && v.srcObject.getVideoTracks().length > 0 }, null, { timeout: 30000 })
+  ok('phát cho cả nhóm (' + mode + '): bên kia nhận được hình + tiếng')
+}
+await A.setInputFiles('#fileCast', 'sample.ogg')
+await until(B, () => !document.querySelector('#audioOnly').hidden, null, { timeout: 30000 })
+ok('phát bài hát (chỉ có tiếng): bên kia thấy đĩa nhạc + tên bài')
 // YouTube: B phải được hỏi trước khi tải trình phát của Google
 await A.evaluate(() => { document.querySelector('#linkInput').value = 'https://youtu.be/aqz-KE-bpKQ' })
 await A.click('#btnLink').catch(() => {})

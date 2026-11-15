@@ -93,6 +93,13 @@ input { width: 100%; min-width: 0; background: #120f24; border: 1px solid var(--
 @keyframes rise { to { transform: translateY(-80vh) scale(1.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .hearts span { animation-duration: .01s; } }
 
+/* chỉ có tiếng (bài hát): đĩa quay thay cho màn đen */
+.audio-only { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; background: radial-gradient(circle at 50% 40%, #3a2140, #0c0a18 70%); pointer-events: none; text-align: center; padding: 16px; }
+.audio-only .disc { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; font-size: 40px; color: #2a0f1d; background: conic-gradient(var(--rose), var(--sun), var(--mint), var(--rose)); animation: spin 6s linear infinite; }
+.audio-only p { margin: 0; font-weight: 600; max-width: 100%; overflow-wrap: anywhere; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .audio-only .disc { animation: none; } }
+
 /* chủ phòng duyệt người vào */
 .requests { display: grid; gap: 8px; }
 .req { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border-radius: 14px; background: #3a2140; border: 1px solid var(--rose); }
